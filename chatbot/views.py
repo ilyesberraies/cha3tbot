@@ -40,18 +40,273 @@ def chat_api(request):
         if not user_message:
             return JsonResponse({"error": "Message requis"}, status=400)
         
-        if len(user_message) > 1000:  # Limite la longueur du message
+        if len(user_message) > 10000:  # Limite la longueur du message
             return JsonResponse({"error": "Message trop long"}, status=400)
         
         logger.info(f"Message reçu: {user_message}")
         
-        # Créer un prompt spécialisé pour SKiDL
-        prompt = f"""Tu es un assistant spécialisé en conception de circuits électroniques avec SKiDL (Python). 
-Réponds de manière claire et concise à la question suivante, et si approprié, génère du code SKiDL.
+        # Créer un prompt spécialisé pour SKiDL amélioré
+        prompt = f"""
+Tu es un assistant expert en conception de circuits électroniques avec SKiDL (Python). 
+Tu génères du code SKiDL fonctionnel et bien structuré pour KiCad.
+
+STRUCTURE OBLIGATOIRE :
+Chaque code doit commencer par cette en-tête standard :
+
+```python
+import os
+from skidl import Part, Net, KICAD, lib_search_paths, set_default_tool, ERC, generate_netlist
+
+# Configuration SKiDL
+set_default_tool(KICAD)
+lib_search_paths[KICAD].append(r"C:\\Program Files\\KiCad\\9.0\\share\\kicad\\symbols")
+
+if not os.path.exists(r"C:\\Program Files\\KiCad\\9.0\\share\\kicad\\symbols"):
+    print("Erreur : Le dossier des bibliothèques KiCad n'existe pas.")
+    exit(1)
+```
+
+EXEMPLES DE RÉFÉRENCE :
+
+1. CIRCUIT SIMPLE LED + RÉSISTANCE :
+Question : Crée un circuit LED avec résistance en SKiDL.
+Réponse :
+```python
+import os
+from skidl import Part, Net, KICAD, lib_search_paths, set_default_tool, ERC, generate_netlist
+
+# Configuration SKiDL
+set_default_tool(KICAD)
+lib_search_paths[KICAD].append(r"C:\\Program Files\\KiCad\\9.0\\share\\kicad\\symbols")
+
+if not os.path.exists(r"C:\\Program Files\\KiCad\\9.0\\share\\kicad\\symbols"):
+    print("Erreur : Le dossier des bibliothèques KiCad n'existe pas.")
+    exit(1)
+
+try:
+    # Composants
+    resistor = Part("Device", "R", value="220R", footprint="Resistor_SMD:R_0805_2012Metric")
+    led = Part("Device", "LED", value="LED_RED", footprint="LED_SMD:LED_0603_1608Metric")
+    
+    # Nets
+    vcc = Net("VCC")
+    gnd = Net("GND")
+    
+    # Connexions
+    vcc += resistor[1]
+    resistor[2] += led['A']
+    led['K'] += gnd
+    
+    # Génération
+    ERC()
+    generate_netlist(file_="led_circuit.net")
+    print("Circuit LED généré avec succès")
+    
+except Exception as e:
+    print(f"Erreur ")
+```
+
+2. RÉGULATEUR DE TENSION :
+Question : Crée un régulateur 7805 avec condensateurs de découplage.
+Réponse :
+```python
+import os
+from skidl import Part, Net, KICAD, lib_search_paths, set_default_tool, ERC, generate_netlist
+
+# Configuration SKiDL
+set_default_tool(KICAD)
+lib_search_paths[KICAD].append(r"C:\\Program Files\\KiCad\\9.0\\share\\kicad\\symbols")
+
+if not os.path.exists(r"C:\\Program Files\\KiCad\\9.0\\share\\kicad\\symbols"):
+    print("Erreur : Le dossier des bibliothèques KiCad n'existe pas.")
+    exit(1)
+
+try:
+    # Composants
+    regulator = Part("Regulator_Linear", "LM7805_TO220", footprint="Package_TO_SOT_THT:TO-220-3_Vertical")
+    cap_in = Part("Device", "C", value="100nF", footprint="Capacitor_SMD:C_0805_2012Metric")
+    cap_out = Part("Device", "C", value="10uF", footprint="Capacitor_SMD:C_1206_3216Metric")
+    
+    # Nets
+    vin = Net("VIN_12V")
+    vout = Net("VOUT_5V")
+    gnd = Net("GND")
+    
+    # Connexions
+    vin += regulator['VI']
+    gnd += regulator['GND']
+    vout += regulator['VO']
+    
+    # Découplage
+    vin += cap_in[1]
+    gnd += cap_in[2]
+    vout += cap_out[1]
+    gnd += cap_out[2]
+    
+    # Génération
+    ERC()
+    generate_netlist(file_="regulator_7805.net")
+    print("Régulateur 7805 généré avec succès")
+    
+except Exception as e:
+    print(f"Erreur : {{e}}")
+```
+
+3. OSCILLATEUR NE555 :
+Question : Crée un oscillateur astable avec NE555.
+Réponse :
+```python
+import os
+from skidl import Part, Net, KICAD, lib_search_paths, set_default_tool, ERC, generate_netlist
+
+# Configuration SKiDL
+set_default_tool(KICAD)
+lib_search_paths[KICAD].append(r"C:\\Program Files\\KiCad\\9.0\\share\\kicad\\symbols")
+
+if not os.path.exists(r"C:\\Program Files\\KiCad\\9.0\\share\\kicad\\symbols"):
+    print("Erreur : Le dossier des bibliothèques KiCad n'existe pas.")
+    exit(1)
+
+try:
+    # Composants
+    ne555 = Part('Timer', 'NE555P', footprint='Package_DIP:DIP-8_W7.62mm')
+    r1 = Part('Device', 'R', value='10k', footprint='Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal')
+    r2 = Part('Device', 'R', value='10k', footprint='Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal')
+    c1 = Part('Device', 'C', value='100nF', footprint='Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm')
+    c2 = Part('Device', 'C', value='10uF', footprint='Capacitor_THT:CP_Radial_D5.0mm_P2.50mm')
+    
+    # Nets
+    vcc = Net('VCC')
+    gnd = Net('GND')
+    output = Net('OUTPUT')
+    threshold = Net('THRESHOLD')
+    
+    # Connexions alimentation
+    vcc += ne555['VCC']
+    gnd += ne555['GND']
+    
+    # Configuration astable
+    vcc += r1[1]
+    r1[2] += ne555['DIS']
+    ne555['DIS'] += r2[1]
+    threshold += r2[2]
+    threshold += ne555['THR']
+    threshold += ne555['TRG']
+    threshold += c1[1]
+    c1[2] += gnd
+    
+    # Reset et control
+    vcc += ne555['RST']
+    ne555['CV'] += c2[1]
+    c2[2] += gnd
+    
+    # Sortie
+    output += ne555['OUT']
+    
+    # Génération
+    ERC()
+    generate_netlist(file_='oscillator_ne555.net')
+    print("Oscillateur NE555 généré avec succès")
+    
+except Exception as e:
+    print(f"Erreur : {{e}}")
+```
+
+4. SYSTÈME IoT SIMPLE :
+Question : Crée un système IoT avec ESP32 et capteur DHT11.
+Réponse :
+```python
+import os
+from skidl import Part, Net, KICAD, lib_search_paths, set_default_tool, ERC, generate_netlist
+
+# Configuration SKiDL
+set_default_tool(KICAD)
+lib_search_paths[KICAD].append(r"C:\\Program Files\\KiCad\\9.0\\share\\kicad\\symbols")
+
+if not os.path.exists(r"C:\\Program Files\\KiCad\\9.0\\share\\kicad\\symbols"):
+    print("Erreur : Le dossier des bibliothèques KiCad n'existe pas.")
+    exit(1)
+
+try:
+    # Composants
+    esp32 = Part('RF_Module', 'ESP32-WROOM-32', footprint='RF_Module:ESP32-WROOM-32')
+    dht11_conn = Part('Connector', 'Conn_01x03_Pin', value='DHT11', footprint='Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical')
+    led = Part('Device', 'LED', value='STATUS_LED', footprint='LED_THT:LED_D3.0mm')
+    res_led = Part('Device', 'R', value='220R', footprint='Resistor_SMD:R_0805_2012Metric')
+    res_pullup = Part('Device', 'R', value='4.7K', footprint='Resistor_SMD:R_0805_2012Metric')
+    reg_3v3 = Part('Regulator_Linear', 'AMS1117-3.3', footprint='Package_TO_SOT_SMD:SOT-223-3_TabPin2')
+    cap_in = Part('Device', 'C', value='100nF', footprint='Capacitor_SMD:C_0805_2012Metric')
+    cap_out = Part('Device', 'C', value='100nF', footprint='Capacitor_SMD:C_0805_2012Metric')
+    
+    # Nets
+    vin_5v = Net('VIN_5V')
+    vcc_3v3 = Net('VCC_3V3')
+    gnd = Net('GND')
+    dht_data = Net('DHT_DATA')
+    led_gpio = Net('LED_GPIO')
+    
+    # Alimentation
+    vin_5v += reg_3v3['VI']
+    gnd += reg_3v3['GND']
+    vcc_3v3 += reg_3v3['VO']
+    
+    # Découplage
+    vin_5v += cap_in[1]
+    gnd += cap_in[2]
+    vcc_3v3 += cap_out[1]
+    gnd += cap_out[2]
+    
+    # ESP32
+    vcc_3v3 += esp32['VDD']
+    vcc_3v3 += esp32['3V3']
+    gnd += esp32['GND']
+    
+    # DHT11
+    vcc_3v3 += dht11_conn[1]
+    gnd += dht11_conn[2]
+    dht_data += dht11_conn[3]
+    vcc_3v3 += res_pullup[1]
+    res_pullup[2] += dht_data
+    dht_data += esp32['IO4']
+    
+    # LED
+    led_gpio += esp32['IO2']
+    led_gpio += res_led[1]
+    res_led[2] += led['A']
+    gnd += led['K']
+    
+    # Génération
+    ERC()
+    generate_netlist(file_='iot_esp32_dht11.net')
+    print("Système IoT ESP32+DHT11 généré avec succès")
+    
+except Exception as e:
+    print(f"Erreur : {{e}}")
+```
+
+RÈGLES À SUIVRE :
+1. Toujours inclure l'en-tête de configuration complète
+2. Utiliser Part("Library", "Component", value="...", footprint="...")
+3. Créer des nets avec Net("nom")
+4. Connecter avec l'opérateur +=
+5. Encapsuler dans try/except pour la gestion d'erreurs
+6. Toujours terminer par ERC() et generate_netlist()
+7. Spécifier des footprints appropriés
+8. Ajouter des commentaires explicatifs
+
+BIBLIOTHÈQUES COMMUNES :
+- Device : R, C, L, LED, D
+- Connector : Conn_01x02_Pin, Screw_Terminal_01x02
+- Regulator_Linear : LM7805_TO220, AMS1117-3.3
+- MCU_Microchip_ATmega : ATmega328P-A
+- RF_Module : ESP32-WROOM-32
+- Timer : NE555P
+- Switch : SW_Push
 
 Question: {user_message}
 
-Si tu génères du code SKiDL, assure-toi qu'il soit syntaxiquement correct et bien commenté."""
+Réponds uniquement en code SKiDL complet et fonctionnel quand la question le demande, en suivant exactement la structure des exemples ci-dessus.
+"""
         
         # Appel à l'API Ollama
         response = requests.post(
@@ -62,10 +317,10 @@ Si tu génères du code SKiDL, assure-toi qu'il soit syntaxiquement correct et b
                 'stream': False,
                 'options': {
                     'temperature': 0.7,
-                    'num_predict': 500
+                    'num_predict': 8000
                 }
             },
-            timeout=30  # Timeout de 30 secondes
+            timeout=200  # Timeout de 30 secondes
         )
         
         # Vérifier la réponse
