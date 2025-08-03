@@ -11,4 +11,7 @@ tzdata==2025.2
 urllib3==2.5.0
 djangorestframework
 django-cors-headers
+# Dépendances pour le chatbot
+ollama
+python-decouple
 

@@ -2,6 +2,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.conf import settings
 import json
 import requests
 import logging
@@ -11,9 +12,10 @@ from django.http import HttpResponse
 # Configuration du logging
 logger = logging.getLogger(__name__)
 
-# Configuration Ollama
-OLLAMA_URL = 'http://localhost:11434'
-MODEL_NAME = 'mistral'
+# Configuration Ollama depuis les settings Django
+OLLAMA_URL = getattr(settings, 'OLLAMA_BASE_URL', 'http://localhost:11434')
+MODEL_NAME = getattr(settings, 'OLLAMA_MODEL', 'mistral')
+OLLAMA_TIMEOUT = getattr(settings, 'OLLAMA_TIMEOUT', 30)
 
 def simple_test(request):
     return HttpResponse("✅ Vue simple fonctionne !")
@@ -65,7 +67,7 @@ Si tu génères du code SKiDL, assure-toi qu'il soit syntaxiquement correct et b
                     'num_predict': 500
                 }
             },
-            timeout=30  # Timeout de 30 secondes
+            timeout=OLLAMA_TIMEOUT  # Utilise le timeout des settings Django
         )
         
         # Vérifier la réponse
