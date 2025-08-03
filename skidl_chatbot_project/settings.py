@@ -10,6 +10,11 @@ DEBUG = False
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "www.ejemplo.com", "8000-ijcqp3vqhjzhuzt21a23m-2f4e0218.manusvm.computer"]
 USE_MOCK_LLM = False
 
+# Configuration Ollama
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "mistral")
+OLLAMA_TIMEOUT = int(os.environ.get("OLLAMA_TIMEOUT", "120"))
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
