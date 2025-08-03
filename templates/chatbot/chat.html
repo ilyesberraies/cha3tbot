@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+
+{% block title %}Chatbot SKiDL{% endblock %}
+
+{% block content %}
+<div class="container-fluid h-100">
+    <div class="row h-100">
+        <!-- Colonne du Chatbot -->
+        <div id="chat-container" class="col-12 col-lg-6 d-flex flex-column h-100">
+            <div class="card flex-grow-1 mb-3">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Assistant SKiDL</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-light me-2" onclick="newChat()">Nouveau Chat</button>
+                        <button class="btn btn-sm btn-outline-light" onclick="endChat()">Terminer Chat</button>
+                    </div>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div id="chat-messages" class="flex-grow-1 overflow-auto p-3 mb-3 border rounded" style="min-height: 200px;">
+                        <!-- Les messages du chat seront insérés ici -->
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="message-input" class="form-control" placeholder="Tapez votre message..." aria-label="Message">
+                        <button class="btn btn-primary" type="button" id="send-btn" onclick="sendMessage()">Envoyer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne du Code Généré -->
+        <div id="code-panel" class="col-12 col-lg-6 d-flex flex-column h-100" style="display: none;">
+            <div class="card flex-grow-1">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Code SKiDL Généré</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-light me-2" onclick="copyCode()">Copier</button>
+                        <button class="btn btn-sm btn-outline-light" onclick="downloadCode()">Télécharger</button>
+                    </div>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <pre class="flex-grow-1 overflow-auto p-3 border rounded bg-light">
+<code id="generated-code" class="language-python"># Le code SKiDL apparaîtra ici après la génération
+print("En attente de génération...")</code>
+                    </pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* CSS pour les messages de chat */
+.message {
+    display: flex;
+    margin-bottom: 15px;
+    align-items: flex-start;
+}
+
+.message-user {
+    flex-direction: row-reverse;
+}
+
+.message-user .message-content {
+    background-color: #007bff;
+    color: white;
+    margin-left: 10px;
+}
+
+.message-bot .message-content {
+    background-color: #f8f9fa;
+    color: #333;
+    margin-right: 10px;
+}
+
+.message-content {
+    max-width: 70%;
+    padding: 10px 15px;
+    border-radius: 15px;
+    word-wrap: break-word;
+}
+
+.message-avatar {
+    background-color: #6c757d;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.message-time {
+    font-size: 11px;
+    color: #666;
+    margin-top: 5px;
+    text-align: center;
+    width: 100%;
+}
+
+.typing-indicator .message-content {
+    font-style: italic;
+    opacity: 0.7;
+}
+</style>
+
+<script>
+console.log("Script inline chargé");
+
+// Initialisation au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM chargé, initialisation...");
+    setupEventListeners();
+    initializeChat();
+});
+
+// Configuration des écouteurs d'événements
+function setupEventListeners() {
+    const messageInput = document.getElementById('message-input');
+    if (messageInput) {
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    }
+}
+
+// Initialisation du chat
+function initializeChat() {
+    appendMessage("Bonjour ! Comment puis-je vous aider à concevoir votre circuit SKiDL aujourd'hui ?", "bot");
+}
+
+// Fonction principale pour envoyer un message - URL CORRIGÉE
+async function sendMessage() {
+    console.log("sendMessage appelée");
+    
+    const messageInput = document.getElementById("message-input");
+    const sendBtn = document.getElementById("send-btn");
+    
+    if (!messageInput || !sendBtn) {
+        console.error("Éléments non trouvés:", {messageInput, sendBtn});
+        return;
+    }
+    
+    const userMessage = messageInput.value.trim();
+    
+    if (userMessage === "") {
+        console.log("Message vide, abandon");
+        return;
+    }
+    
+    console.log("Envoi du message:", userMessage);
+    
+    // Ajouter le message de l'utilisateur
+    appendMessage(userMessage, "user");
+    messageInput.value = "";
+    messageInput.disabled = true;
+    sendBtn.disabled = true;
+    showTypingIndicator();
+    
+    try {
+        // URL CORRIGÉE selon votre nouvelle configuration
+        const url = "/api/chat/";  // Plus de préfixe chatbot/
+        
+        console.log("URL de requête:", url);
+        
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie('csrftoken'), // Support CSRF
+            },
+            body: JSON.stringify({ message: userMessage }),
+        });
+        
+        console.log("Statut de la réponse:", response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Erreur de réponse:", errorText);
+            throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log("Données reçues:", data);
+        
+        appendMessage(data.response || "Réponse vide du serveur", "bot");
+        
+        if (data.skidl_code) {
+            displaySkidlCode(data.skidl_code);
+        }
+        
+    } catch (error) {
+        console.error("Erreur complète:", error);
+        appendMessage(`Erreur: ${error.message}`, "bot");
+    } finally {
+        hideTypingIndicator();
+        messageInput.disabled = false;
+        sendBtn.disabled = false;
+        messageInput.focus();
+    }
+}
+
+// Fonction pour récupérer le token CSRF
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Ajouter un message au chat
+function appendMessage(text, sender) {
+    console.log("Ajout du message:", {text, sender});
+    
+    const chatMessages = document.getElementById("chat-messages");
+    if (!chatMessages) {
+        console.error("Element chat-messages non trouvé");
+        return;
+    }
+    
+    const messageDiv = document.createElement("div");
+    messageDiv.classList.add("message", `message-${sender}`);
+    
+    const avatarDiv = document.createElement("div");
+    avatarDiv.classList.add("message-avatar");
+    avatarDiv.textContent = sender === "user" ? "Vous" : "Bot";
+    
+    const contentDiv = document.createElement("div");
+    contentDiv.classList.add("message-content");
+    contentDiv.textContent = text;
+    
+    const timeDiv = document.createElement("div");
+    timeDiv.classList.add("message-time");
+    timeDiv.textContent = new Date().toLocaleTimeString();
+    
+    if (sender === "user") {
+        messageDiv.appendChild(contentDiv);
+        messageDiv.appendChild(avatarDiv);
+    } else {
+        messageDiv.appendChild(avatarDiv);
+        messageDiv.appendChild(contentDiv);
+    }
+    
+    messageDiv.appendChild(timeDiv);
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Afficher le code SKiDL généré
+function displaySkidlCode(code) {
+    console.log("Affichage du code SKiDL:", code);
+    
+    const codePanel = document.getElementById("code-panel");
+    const generatedCode = document.getElementById("generated-code");
+    
+    if (!codePanel || !generatedCode) {
+        console.error("Éléments de code non trouvés");
+        return;
+    }
+    
+    generatedCode.textContent = code;
+    codePanel.style.display = "flex";
+}
+
+// Indicateur de frappe
+function showTypingIndicator() {
+    const chatMessages = document.getElementById("chat-messages");
+    if (!chatMessages) return;
+    
+    const typingIndicatorDiv = document.createElement("div");
+    typingIndicatorDiv.classList.add("message", "message-bot", "typing-indicator");
+    typingIndicatorDiv.id = "typing-indicator";
+    typingIndicatorDiv.innerHTML = `
+        <div class="message-avatar">Bot</div>
+        <div class="message-content">En cours de génération...</div>
+    `;
+    
+    chatMessages.appendChild(typingIndicatorDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function hideTypingIndicator() {
+    const typingIndicatorDiv = document.getElementById("typing-indicator");
+    if (typingIndicatorDiv) {
+        typingIndicatorDiv.remove();
+    }
+}
+
+// Fonctions utilitaires
+function newChat() {
+    console.log("Nouveau chat");
+    const chatMessages = document.getElementById("chat-messages");
+    if (chatMessages) {
+        chatMessages.innerHTML = "";
+    }
+    
+    const codePanel = document.getElementById("code-panel");
+    if (codePanel) {
+        codePanel.style.display = "none";
+    }
+    
+    const generatedCode = document.getElementById("generated-code");
+    if (generatedCode) {
+        generatedCode.textContent = "# Le code SKiDL apparaîtra ici après la génération\nprint(\"En attente de génération...\")";
+    }
+    
+    initializeChat();
+}
+
+function endChat() {
+    alert("Chat terminé. Merci d'avoir utilisé l'assistant SKiDL !");
+    newChat();
+}
+
+function copyCode() {
+    const code = document.getElementById("generated-code");
+    if (!code) return;
+    
+    navigator.clipboard.writeText(code.textContent).then(() => {
+        alert("Code copié dans le presse-papiers !");
+    }).catch(err => {
+        console.error("Erreur lors de la copie:", err);
+        alert("Erreur lors de la copie du code");
+    });
+}
+
+function downloadCode() {
+    const code = document.getElementById("generated-code");
+    if (!code) return;
+    
+    const filename = "skidl_circuit.py";
+    const blob = new Blob([code.textContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+console.log("Toutes les fonctions définies!");
+</script>
+{% endblock %}
